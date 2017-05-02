@@ -1,4 +1,4 @@
-#include <ZumoServo.h>
+#include <servo.h>
 
 void setup() {
   servoInit();
