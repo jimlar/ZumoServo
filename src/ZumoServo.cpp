@@ -4,67 +4,38 @@
 
 #define SERVO_PIN 6
 
+#define MIN_PULSE_WIDTH       544     // the shortest pulse sent to a servo
+#define MAX_PULSE_WIDTH      2400     // the longest pulse sent to a servo
+#define DEFAULT_PULSE_WIDTH  1500     // default pulse width when servo is attached
+
+
 uint16_t volatile servoTime = 0;
-uint16_t volatile servoHighTime = 3000;
+uint16_t volatile servoHighTime = 2 * DEFAULT_PULSE_WIDTH;
 boolean volatile servoHigh = false;
-
-ISR(TIMER4_COMPA_vect)
-{
-  servoTime += OCR4A + 1;
-
-  static uint16_t highTimeCopy = 3000;
-  static uint8_t interruptCount = 0;
-
-  if(servoHigh)
-  {
-    if(++interruptCount == 2)
-    {
-      OCR4A = 255;
-    }
-
-    if(servoTime >= highTimeCopy)
-    {
-      digitalWrite(SERVO_PIN, LOW);
-      servoHigh = false;
-      interruptCount = 0;
-    }
-  }
-  else
-  {
-    if(servoTime >= 40000)
-    {
-      highTimeCopy = servoHighTime;
-      digitalWrite(SERVO_PIN, HIGH);
-      servoHigh = true;
-      servoTime = 0;
-      interruptCount = 0;
-      OCR4A = ((highTimeCopy % 256) + 256)/2 - 1;
-    }
-  }
-}
 
 void servoInit()
 {
-  digitalWrite(SERVO_PIN, LOW);
   pinMode(SERVO_PIN, OUTPUT);
 
-  // Turn on CTC mode.  Timer 2 will count up to OCR2A, then
-  // reset to 0 and cause an interrupt.
-  TCCR4A = (1 << WGM41);
-  // Set a 1:8 prescaler.  This gives us 0.5us resolution.
-  TCCR4B = (1 << CS41);
+  // 10-bit operation
+  TC4H = 0x03; OCR4C = 0xFF;
+  //Configuration of Timer 4 Registers, OC4A (D13) + 0C4B (D10)
+  // TCCR4A = 0b10100011;
 
-  // Put the timer in a good default state.
-  TCNT4 = 0;
-  OCR4A = 255;
-
-  TIMSK4 |= (1 << OCIE4A);  // Enable timer compare interrupt.
-  sei();   // Enable interrupts.
+  TCCR4C = 0b10100011; // ?? bits right
+  //Prescaler
+  TCCR4B = 0b00000011;
 }
 
-void servoSetPosition(uint16_t highTimeMicroseconds)
+void servoWriteMicroSeconds(int highTimeMicroseconds) {
+  TC4H = highTimeMicroseconds >> 8;
+  OCR4C = 0xFF & highTimeMicroseconds;
+}
+
+void servoWrite(int value)
 {
-  TIMSK4 &= ~(1 << OCIE4A); // disable timer compare interrupt
-  servoHighTime = highTimeMicroseconds * 2;
-  TIMSK4 |= (1 << OCIE4A); // enable timer compare interrupt
+  if(value < 0) value = 0;
+  if(value > 180) value = 180;
+  value = map(value, 0, 180, MIN_PULSE_WIDTH,  MAX_PULSE_WIDTH);
+  servoWriteMicroSeconds(value);
 }

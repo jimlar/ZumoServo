@@ -3,6 +3,8 @@
 
 void servoInit();
 
-void servoSetPosition(uint16_t highTimeMicroseconds);
+
+void servoWriteMicroSeconds(int highTimeMicroseconds);
+void servoWrite(int value);
 
 #endif
