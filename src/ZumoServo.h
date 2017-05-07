@@ -3,6 +3,6 @@
 
 void servoInit();
 
-void servoSetPosition(uint16_t highTimeMicroseconds);
+void servoWrite(int angle);
 
 #endif

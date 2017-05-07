@@ -4,6 +4,10 @@
 
 #define SERVO_PIN 6
 
+#define SERVO_MAX 4400
+#define SERVO_MIN 1500
+#define SERVO_DEFAULT 2600
+
 uint16_t volatile servoTime = 0;
 uint16_t volatile servoHighTime = 3000;
 boolean volatile servoHigh = false;
@@ -62,9 +66,15 @@ void servoInit()
   sei();   // Enable interrupts.
 }
 
-void servoSetPosition(uint16_t highTimeMicroseconds)
+void servoWriteMicroSeconds(int highTimeMicroseconds)
 {
+  highTimeMicroseconds = constrain(highTimeMicroseconds, SERVO_MIN, SERVO_MAX);
   TIMSK4 &= ~(1 << OCIE4A); // disable timer compare interrupt
   servoHighTime = highTimeMicroseconds * 2;
   TIMSK4 |= (1 << OCIE4A); // enable timer compare interrupt
+}
+
+void servoWrite(int angle) {
+  angle = constrain(angle, 0, 180);
+  servoWriteMicroSeconds(map(angle, 0, 180, SERVO_MIN, SERVO_MAX));
 }
