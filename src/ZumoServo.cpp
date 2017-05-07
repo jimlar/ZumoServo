@@ -17,25 +17,40 @@ void servoInit()
 {
   pinMode(SERVO_PIN, OUTPUT);
 
-  // 10-bit operation
-  TC4H = 0x03; OCR4C = 0xFF;
-  //Configuration of Timer 4 Registers, OC4A (D13) + 0C4B (D10)
-  // TCCR4A = 0b10100011;
+  // See http://wiki.dsvf.net/index.php?title=Fast_PWM_on_the_Atmega_32U4
 
-  TCCR4C = 0b10100011; // ?? bits right
-  //Prescaler
-  TCCR4B = 0b00000011;
+  //Prescaler (1/32)
+  TCCR4B = 0b00000110;
+
+  // Enable PWM pin
+  TCCR4C = 0b00001001;
+
+  //Ignore fault protection and use fast PWM
+  TCCR4D = 0b00000000;
+
+  // Enhanced pwm -> 11bits
+  TCCR4E = 0b01000000;
+  TC4H = 7; OCR4C = 0xFF;
+
+  // PLL Postcaler for High Speed Timer, disconnect and use system clock
+  PLLFRQ = PLLFRQ & 0b11001111;
+}
+
+int set_pwm(int value){
+  value &= 0x7FF;  // restrict to 11 bits
+  TC4H = (value >> 8);
+  OCR4D = value & 0x00FF;
+  return value;
 }
 
 void servoWriteMicroSeconds(int highTimeMicroseconds) {
-  TC4H = highTimeMicroseconds >> 8;
-  OCR4C = 0xFF & highTimeMicroseconds;
+  highTimeMicroseconds = constrain(highTimeMicroseconds, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+  set_pwm(highTimeMicroseconds / 2);
 }
 
 void servoWrite(int value)
 {
-  if(value < 0) value = 0;
-  if(value > 180) value = 180;
+  value = constrain(value, 0, 180);
   value = map(value, 0, 180, MIN_PULSE_WIDTH,  MAX_PULSE_WIDTH);
   servoWriteMicroSeconds(value);
 }
